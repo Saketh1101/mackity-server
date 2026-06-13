@@ -1,0 +1,128 @@
+import Combine
+import Foundation
+import Network
+
+@MainActor
+final class MacRemoteServer: ObservableObject {
+    @Published private(set) var isRunning = false
+    @Published private(set) var statusMessage = "Server stopped"
+    @Published private(set) var connectedClientCount = 0
+    @Published private(set) var lastReceivedMessage: RemoteMessage?
+
+    private var listener: NWListener?
+    private var connections: [UUID: RemoteConnection] = [:]
+    private let listenerQueue = DispatchQueue(label: "MacRemote.Server.Listener")
+    private let remoteControlService = RemoteControlService()
+
+    func start(deviceName: String) {
+        guard listener == nil else { return }
+
+        do {
+            let listener = try NWListener(using: .tcp)
+            listener.service = NWListener.Service(name: deviceName, type: MacRemoteService.bonjourType)
+
+            listener.stateUpdateHandler = { [weak self] state in
+                Task { @MainActor in
+                    self?.handleListenerState(state)
+                }
+            }
+
+            listener.newConnectionHandler = { [weak self] nwConnection in
+                Task { @MainActor in
+                    self?.accept(nwConnection)
+                }
+            }
+
+            self.listener = listener
+            statusMessage = "Starting server..."
+            listener.start(queue: listenerQueue)
+        } catch {
+            statusMessage = "Server failed: \(error.localizedDescription)"
+            isRunning = false
+            listener = nil
+        }
+    }
+
+    func stop() {
+        listener?.cancel()
+        listener = nil
+        connections.values.forEach { $0.cancel() }
+        connections.removeAll()
+        connectedClientCount = 0
+        isRunning = false
+        statusMessage = "Server stopped"
+    }
+
+    func send(_ message: RemoteMessage, to connectionID: UUID) {
+        connections[connectionID]?.send(message)
+    }
+
+    private func accept(_ nwConnection: NWConnection) {
+        let remoteConnection = RemoteConnection(connection: nwConnection)
+        connections[remoteConnection.id] = remoteConnection
+        connectedClientCount = connections.count
+        statusMessage = "Client connected"
+
+        remoteConnection.onStateChange = { [weak self, weak remoteConnection] state in
+            guard let remoteConnection else { return }
+            Task { @MainActor in
+                self?.handleConnectionState(state, connectionID: remoteConnection.id)
+            }
+        }
+
+        remoteConnection.onMessage = { [weak self, weak remoteConnection] message in
+            guard let remoteConnection else { return }
+            Task { @MainActor in
+                self?.handle(message, from: remoteConnection.id)
+            }
+        }
+
+        remoteConnection.onError = { [weak self] error in
+            Task { @MainActor in
+                self?.statusMessage = "Connection error: \(error.localizedDescription)"
+            }
+        }
+
+        remoteConnection.start()
+    }
+
+    private func handleListenerState(_ state: NWListener.State) {
+        switch state {
+        case .setup:
+            statusMessage = "Preparing server..."
+        case .waiting(let error):
+            isRunning = false
+            statusMessage = "Server waiting: \(error.localizedDescription)"
+        case .ready:
+            isRunning = true
+            statusMessage = "Server running"
+        case .failed(let error):
+            isRunning = false
+            statusMessage = "Server failed: \(error.localizedDescription)"
+            listener = nil
+        case .cancelled:
+            isRunning = false
+            statusMessage = "Server stopped"
+            listener = nil
+        @unknown default:
+            statusMessage = "Unknown server state"
+        }
+    }
+
+    private func handleConnectionState(_ state: NWConnection.State, connectionID: UUID) {
+        switch state {
+        case .failed, .cancelled:
+            connections.removeValue(forKey: connectionID)
+            connectedClientCount = connections.count
+            statusMessage = isRunning ? "Server running" : "Server stopped"
+        default:
+            break
+        }
+    }
+
+    private func handle(_ message: RemoteMessage, from connectionID: UUID) {
+        lastReceivedMessage = message
+        let responses = remoteControlService.handle(message)
+        responses.forEach { send($0, to: connectionID) }
+    }
+}

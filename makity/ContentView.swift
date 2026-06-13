@@ -1,21 +1,24 @@
-//
-//  ContentView.swift
-//  makity
-//
-//  Created by Saketh on 13/06/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        #if os(macOS)
+        MacServerView()
+        #elseif os(iOS)
+        PhoneDiscoveryView()
+        #else
+        UnsupportedPlatformView()
+        #endif
+    }
+}
+
+struct UnsupportedPlatformView: View {
+    var body: some View {
+        ContentUnavailableView(
+            "Unsupported Platform",
+            systemImage: "exclamationmark.triangle",
+            description: Text("MacRemote Phase 1 supports macOS server and iOS client targets.")
+        )
     }
 }
 
