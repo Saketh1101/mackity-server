@@ -35,6 +35,8 @@ struct MacServerView: View {
             detailRow(title: "Local IP", value: viewModel.localIPAddress)
             detailRow(title: "Bonjour", value: MacRemoteService.bonjourType)
             detailRow(title: "Status", value: viewModel.server.statusMessage)
+            detailRow(title: "Screen", value: viewModel.server.streamingStatusMessage)
+            detailRow(title: "Mouse", value: viewModel.server.accessibilityStatusMessage)
         }
         .textSelection(.enabled)
     }
@@ -56,6 +58,13 @@ struct MacServerView: View {
                 viewModel.refreshNetworkInfo()
             } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
+            }
+            .controlSize(.large)
+
+            Button {
+                viewModel.server.requestAccessibilityPermission()
+            } label: {
+                Label("Mouse Permission", systemImage: "cursorarrow.motionlines")
             }
             .controlSize(.large)
         }

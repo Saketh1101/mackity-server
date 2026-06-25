@@ -13,6 +13,8 @@ final class RemoteConnection: Identifiable {
     private let queue: DispatchQueue
     private var isReceiving = false
 
+    private static let maximumFrameLength = 8 * 1024 * 1024
+
     init(connection: NWConnection, queueLabel: String = "MacRemote.RemoteConnection") {
         self.connection = connection
         self.endpointDescription = connection.endpoint.displayName
@@ -81,6 +83,13 @@ final class RemoteConnection: Identifiable {
             guard let data, let length = RemoteMessageCodec.frameLength(from: data), length > 0 else {
                 self.isReceiving = false
                 self.onError?(RemoteMessageCodecError.invalidLengthPrefix)
+                return
+            }
+
+            guard length <= Self.maximumFrameLength else {
+                self.isReceiving = false
+                self.onError?(RemoteMessageCodecError.payloadTooLarge)
+                self.cancel()
                 return
             }
 

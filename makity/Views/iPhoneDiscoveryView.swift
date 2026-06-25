@@ -11,6 +11,28 @@ struct PhoneDiscoveryView: View {
                     statusView
                 }
 
+                if viewModel.client.isConnected {
+                    Section {
+                        NavigationLink {
+                            RemoteScreenView(client: viewModel.client)
+                        } label: {
+                            Label("Open Remote Screen", systemImage: "display")
+                        }
+
+                        NavigationLink {
+                            RemoteMouseView(client: viewModel.client)
+                        } label: {
+                            Label("Open Touchpad", systemImage: "cursorarrow.motionlines")
+                        }
+
+                        NavigationLink {
+                            RemoteKeyboardView(client: viewModel.client)
+                        } label: {
+                            Label("Open Keyboard", systemImage: "keyboard")
+                        }
+                    }
+                }
+
                 Section("Available Macs") {
                     if viewModel.availableMacs.isEmpty {
                         ContentUnavailableView(
