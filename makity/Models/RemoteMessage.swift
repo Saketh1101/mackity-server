@@ -94,12 +94,35 @@ struct KeyboardInputPayload: Codable, Sendable {
 struct ScreenshotRequestPayload: Codable, Sendable {
     let maximumWidth: Int?
     let quality: Double?
+    let framesPerSecond: Int?
+
+    nonisolated init(maximumWidth: Int? = nil, quality: Double? = nil, framesPerSecond: Int? = nil) {
+        self.maximumWidth = maximumWidth
+        self.quality = quality
+        self.framesPerSecond = framesPerSecond
+    }
 }
 
 struct ScreenshotResponsePayload: Codable, Sendable {
     let width: Int
     let height: Int
     let jpegBase64: String
+    let encodedByteCount: Int
+    let sequenceNumber: Int
+
+    nonisolated init(
+        width: Int,
+        height: Int,
+        jpegBase64: String,
+        encodedByteCount: Int,
+        sequenceNumber: Int
+    ) {
+        self.width = width
+        self.height = height
+        self.jpegBase64 = jpegBase64
+        self.encodedByteCount = encodedByteCount
+        self.sequenceNumber = sequenceNumber
+    }
 }
 
 struct RemoteMessage: Codable, Identifiable, Sendable {

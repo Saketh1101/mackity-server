@@ -22,10 +22,17 @@ final class ScreenStreamingService: NSObject, ObservableObject {
     nonisolated(unsafe) private var configuration = ScreenStreamingConfiguration()
     nonisolated(unsafe) private var lastFrameTime: CFTimeInterval = 0
     nonisolated(unsafe) private var isEncodingFrame = false
+    nonisolated(unsafe) private var frameSequenceNumber = 0
 
     func start(configuration: ScreenStreamingConfiguration = ScreenStreamingConfiguration()) async {
-        guard !isStreaming else { return }
+        if isStreaming {
+            guard self.configuration != configuration else { return }
+            await stop()
+        }
+
         self.configuration = configuration
+        lastFrameTime = 0
+        frameSequenceNumber = 0
 
         do {
             let shareableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
@@ -67,6 +74,7 @@ final class ScreenStreamingService: NSObject, ObservableObject {
         self.stream = nil
         isStreaming = false
         isEncodingFrame = false
+        frameSequenceNumber = 0
         statusMessage = "Screen stream stopped"
     }
 
@@ -112,10 +120,13 @@ final class ScreenStreamingService: NSObject, ObservableObject {
                 return nil
             }
 
+            frameSequenceNumber += 1
             let payload = ScreenshotResponsePayload(
                 width: Int(extent.width),
                 height: Int(extent.height),
-                jpegBase64: jpegData.base64EncodedString()
+                jpegBase64: jpegData.base64EncodedString(),
+                encodedByteCount: jpegData.count,
+                sequenceNumber: frameSequenceNumber
             )
             return RemoteMessage(type: .screenshotResponse, screenshotResponse: payload)
         }

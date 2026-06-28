@@ -40,8 +40,12 @@ struct RemoteScreenView: View {
             Spacer()
 
             if viewModel.frameCount > 0 {
-                Text("\(viewModel.frameCount) frames")
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(viewModel.frameCount) frames")
+                    Text(String(format: "%.1f FPS | %.0f KB | %@", viewModel.averageFrameRate, viewModel.lastFrameKilobytes, viewModel.streamProfile))
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             }
         }
         .font(.footnote)
