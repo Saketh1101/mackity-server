@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>$(PACKAGE_TYPE)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+
+    <!-- macOS: hide dock icon so the app lives only in the menu bar -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <!-- macOS: principal class for SwiftUI @main apps -->
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+
+    <!-- iOS: scene-based lifecycle -->
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <false/>
+    </dict>
+
+    <!-- iOS: pointer / indirect input support on iPad -->
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
+
+    <!-- iOS: blank launch screen (SwiftUI manages the window) -->
+    <key>UILaunchScreen</key>
+    <dict/>
+
+    <!-- iOS: status bar -->
+    <key>UIStatusBarStyle</key>
+    <string>UIStatusBarStyleDefault</string>
+
+    <!-- iOS: supported orientations for iPhone -->
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+
+    <!-- iOS: supported orientations for iPad -->
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+
+    <!-- iOS 14+: REQUIRED for NWBrowser / Bonjour discovery on the local network.
+         Without these two keys the system silently blocks all local network access
+         and the permission prompt is never shown to the user. -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>MacRemote needs local network access to discover and connect to Macs on your Wi-Fi network.</string>
+
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_macremote._tcp</string>
+    </array>
+</dict>
+</plist>

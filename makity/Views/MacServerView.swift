@@ -4,11 +4,21 @@ import SwiftUI
 struct MacServerView: View {
     @StateObject private var viewModel = MacServerViewModel()
 
+    private var accessibilityGranted: Bool {
+        viewModel.server.accessibilityStatusMessage.contains("granted")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             header
+            if !accessibilityGranted {
+                accessibilityWarning
+            }
             serverDetails
             controls
+            if viewModel.availableDisplayCount > 1 {
+                displayPicker
+            }
             connectionSummary
             Spacer(minLength: 0)
         }
@@ -27,6 +37,36 @@ struct MacServerView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private var accessibilityWarning: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .font(.title2)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Mouse & Keyboard Control Blocked")
+                    .font(.headline)
+                Text("Go to System Settings → Privacy & Security → Accessibility and enable Makity.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Button {
+                viewModel.server.requestAccessibilityPermission()
+                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+            } label: {
+                Text("Open Settings")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
+        }
+        .padding(14)
+        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(.orange.opacity(0.35), lineWidth: 1))
     }
 
     private var serverDetails: some View {
@@ -67,6 +107,24 @@ struct MacServerView: View {
                 Label("Mouse Permission", systemImage: "cursorarrow.motionlines")
             }
             .controlSize(.large)
+        }
+    }
+
+    private var displayPicker: some View {
+        HStack(spacing: 12) {
+            Text("Display")
+                .foregroundStyle(.secondary)
+
+            Picker("Display", selection: $viewModel.selectedDisplayIndex) {
+                ForEach(0..<viewModel.availableDisplayCount, id: \.self) { i in
+                    Text("Display \(i + 1)").tag(i)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 240)
+            .onChange(of: viewModel.selectedDisplayIndex) { _, newIndex in
+                viewModel.switchDisplay(to: newIndex)
+            }
         }
     }
 

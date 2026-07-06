@@ -63,21 +63,27 @@ struct PhoneDiscoveryView: View {
                 }
             }
         }
-        .onAppear {
-            viewModel.startDiscovery()
-        }
-        .onDisappear {
-            viewModel.stopDiscovery()
-        }
+        .onAppear { viewModel.startDiscovery() }
+        .onDisappear { viewModel.stopDiscovery() }
     }
 
     private var statusView: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label(viewModel.discovery.statusMessage, systemImage: "dot.radiowaves.left.and.right")
-            Label(viewModel.client.statusMessage, systemImage: viewModel.client.isConnected ? "checkmark.circle" : "link")
-                .foregroundStyle(viewModel.client.isConnected ? .green : .secondary)
 
-            if viewModel.client.isConnected {
+            HStack(spacing: 8) {
+                if viewModel.client.isReconnecting {
+                    ProgressView()
+                        .scaleEffect(0.75)
+                }
+                Label(
+                    viewModel.client.statusMessage,
+                    systemImage: viewModel.client.isConnected ? "checkmark.circle" : "link"
+                )
+                .foregroundStyle(viewModel.client.isConnected ? .green : .secondary)
+            }
+
+            if viewModel.client.isConnected || viewModel.client.isReconnecting {
                 Button(role: .destructive) {
                     viewModel.disconnect()
                 } label: {

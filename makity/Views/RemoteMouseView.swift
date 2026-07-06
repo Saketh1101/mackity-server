@@ -29,6 +29,16 @@ struct RemoteMouseView: View {
 
             Spacer()
 
+            Button {
+                guard client.isConnected else { return }
+                viewModel.rightClick()
+            } label: {
+                Label("Right Click", systemImage: "cursorarrow.click.2")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(!client.isConnected)
+
             Toggle(isOn: $viewModel.isDragModeEnabled) {
                 Label("Drag", systemImage: "hand.draw")
             }
@@ -67,6 +77,10 @@ struct RemoteMouseView: View {
                 onClick: { clickCount in
                     guard client.isConnected else { return }
                     viewModel.click(clickCount: clickCount)
+                },
+                onRightClick: {
+                    guard client.isConnected else { return }
+                    viewModel.rightClick()
                 },
                 onDragStart: {
                     guard client.isConnected else { return }

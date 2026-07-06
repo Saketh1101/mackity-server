@@ -10,7 +10,12 @@ enum RemoteMessageType: String, Codable, CaseIterable, Sendable {
     case pong
     case mouseMove
     case mouseClick
+    case mouseAbsoluteMove
     case keyboardInput
+    case mediaKey
+    case clipboardPush      // iPhone → Mac: write text to Mac clipboard
+    case clipboardPull      // iPhone → Mac: request Mac clipboard content
+    case clipboardContent   // Mac → iPhone: clipboard text response
     case screenshotRequest
     case screenshotResponse
 }
@@ -35,6 +40,8 @@ enum MouseClickAction: String, Codable, Sendable {
 enum KeyboardSpecialKey: String, Codable, Sendable {
     case enter
     case delete
+    case tab
+    case escape
     case arrowUp
     case arrowDown
     case arrowLeft
@@ -46,6 +53,17 @@ enum KeyboardModifier: String, Codable, Sendable {
     case shift
     case option
     case control
+}
+
+enum MediaKey: String, Codable, Sendable {
+    case volumeUp
+    case volumeDown
+    case mute
+    case playPause
+    case nextTrack
+    case previousTrack
+    case brightnessUp
+    case brightnessDown
 }
 
 struct MouseMovePayload: Codable, Sendable {
@@ -72,6 +90,21 @@ struct MouseClickPayload: Codable, Sendable {
     }
 }
 
+/// Normalized (0–1) absolute screen position. The Mac converts to display coordinates.
+struct MouseAbsoluteMovePayload: Codable, Sendable {
+    let normalizedX: Double
+    let normalizedY: Double
+    let click: Bool
+    let button: MouseButton
+
+    nonisolated init(normalizedX: Double, normalizedY: Double, click: Bool = false, button: MouseButton = .left) {
+        self.normalizedX = max(0, min(1, normalizedX))
+        self.normalizedY = max(0, min(1, normalizedY))
+        self.click = click
+        self.button = button
+    }
+}
+
 struct KeyboardInputPayload: Codable, Sendable {
     let text: String?
     let keyCode: UInt16?
@@ -91,15 +124,33 @@ struct KeyboardInputPayload: Codable, Sendable {
     }
 }
 
+struct MediaKeyPayload: Codable, Sendable {
+    let key: MediaKey
+
+    nonisolated init(key: MediaKey) {
+        self.key = key
+    }
+}
+
+struct ClipboardPayload: Codable, Sendable {
+    let text: String
+
+    nonisolated init(text: String) {
+        self.text = text
+    }
+}
+
 struct ScreenshotRequestPayload: Codable, Sendable {
     let maximumWidth: Int?
     let quality: Double?
     let framesPerSecond: Int?
+    let displayIndex: Int?
 
-    nonisolated init(maximumWidth: Int? = nil, quality: Double? = nil, framesPerSecond: Int? = nil) {
+    nonisolated init(maximumWidth: Int? = nil, quality: Double? = nil, framesPerSecond: Int? = nil, displayIndex: Int? = nil) {
         self.maximumWidth = maximumWidth
         self.quality = quality
         self.framesPerSecond = framesPerSecond
+        self.displayIndex = displayIndex
     }
 }
 
@@ -109,19 +160,22 @@ struct ScreenshotResponsePayload: Codable, Sendable {
     let jpegBase64: String
     let encodedByteCount: Int
     let sequenceNumber: Int
+    let displayCount: Int
 
     nonisolated init(
         width: Int,
         height: Int,
         jpegBase64: String,
         encodedByteCount: Int,
-        sequenceNumber: Int
+        sequenceNumber: Int,
+        displayCount: Int = 1
     ) {
         self.width = width
         self.height = height
         self.jpegBase64 = jpegBase64
         self.encodedByteCount = encodedByteCount
         self.sequenceNumber = sequenceNumber
+        self.displayCount = displayCount
     }
 }
 
@@ -131,7 +185,10 @@ struct RemoteMessage: Codable, Identifiable, Sendable {
     let createdAt: Date
     let mouseMove: MouseMovePayload?
     let mouseClick: MouseClickPayload?
+    let mouseAbsoluteMove: MouseAbsoluteMovePayload?
     let keyboardInput: KeyboardInputPayload?
+    let mediaKey: MediaKeyPayload?
+    let clipboardContent: ClipboardPayload?
     let screenshotRequest: ScreenshotRequestPayload?
     let screenshotResponse: ScreenshotResponsePayload?
 
@@ -141,7 +198,10 @@ struct RemoteMessage: Codable, Identifiable, Sendable {
         createdAt: Date = Date(),
         mouseMove: MouseMovePayload? = nil,
         mouseClick: MouseClickPayload? = nil,
+        mouseAbsoluteMove: MouseAbsoluteMovePayload? = nil,
         keyboardInput: KeyboardInputPayload? = nil,
+        mediaKey: MediaKeyPayload? = nil,
+        clipboardContent: ClipboardPayload? = nil,
         screenshotRequest: ScreenshotRequestPayload? = nil,
         screenshotResponse: ScreenshotResponsePayload? = nil
     ) {
@@ -150,7 +210,10 @@ struct RemoteMessage: Codable, Identifiable, Sendable {
         self.createdAt = createdAt
         self.mouseMove = mouseMove
         self.mouseClick = mouseClick
+        self.mouseAbsoluteMove = mouseAbsoluteMove
         self.keyboardInput = keyboardInput
+        self.mediaKey = mediaKey
+        self.clipboardContent = clipboardContent
         self.screenshotRequest = screenshotRequest
         self.screenshotResponse = screenshotResponse
     }

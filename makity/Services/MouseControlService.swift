@@ -42,6 +42,14 @@ final class MouseControlService: ObservableObject {
         case .mouseClick:
             guard let payload = message.mouseClick else { return }
             handleClick(payload)
+        case .mouseAbsoluteMove:
+            guard let payload = message.mouseAbsoluteMove else { return }
+            moveToAbsolutePosition(
+                normalizedX: payload.normalizedX,
+                normalizedY: payload.normalizedY,
+                click: payload.click,
+                button: payload.button
+            )
         default:
             break
         }
@@ -64,6 +72,35 @@ final class MouseControlService: ObservableObject {
             mouseCursorPosition: nextLocation,
             mouseButton: .left
         )?.post(tap: .cghidEventTap)
+    }
+
+    private func moveToAbsolutePosition(normalizedX: Double, normalizedY: Double, click: Bool, button: MouseButton) {
+        let bounds = CGDisplayBounds(CGMainDisplayID())
+        let position = CGPoint(
+            x: bounds.origin.x + normalizedX * bounds.size.width,
+            y: bounds.origin.y + normalizedY * bounds.size.height
+        )
+
+        CGWarpMouseCursorPosition(position)
+        CGAssociateMouseAndMouseCursorPosition(boolean_t(1))
+
+        CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: position, mouseButton: .left)?
+            .post(tap: .cghidEventTap)
+
+        guard click else { return }
+
+        let cgButton = cgMouseButton(for: button)
+        let downType = mouseEventType(for: button, isDown: true)
+        let upType = mouseEventType(for: button, isDown: false)
+
+        guard let down = CGEvent(mouseEventSource: nil, mouseType: downType, mouseCursorPosition: position, mouseButton: cgButton),
+              let up = CGEvent(mouseEventSource: nil, mouseType: upType, mouseCursorPosition: position, mouseButton: cgButton)
+        else { return }
+
+        down.setIntegerValueField(.mouseEventClickState, value: 1)
+        up.setIntegerValueField(.mouseEventClickState, value: 1)
+        down.post(tap: .cghidEventTap)
+        up.post(tap: .cghidEventTap)
     }
 
     private func scroll(deltaX: Double, deltaY: Double) {

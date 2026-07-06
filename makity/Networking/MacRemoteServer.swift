@@ -10,12 +10,14 @@ final class MacRemoteServer: ObservableObject {
     @Published private(set) var lastReceivedMessage: RemoteMessage?
     @Published private(set) var streamingStatusMessage = "Screen stream stopped"
     @Published private(set) var accessibilityStatusMessage = "Accessibility permission not requested"
+    @Published private(set) var availableDisplayCount = 1
 
     private var listener: NWListener?
     private var connections: [UUID: RemoteConnection] = [:]
     private let listenerQueue = DispatchQueue(label: "MacRemote.Server.Listener")
     private let remoteControlService = RemoteControlService()
     private var cancellables: Set<AnyCancellable> = []
+    private var currentDisplayIndex = 0
 
     #if os(macOS)
     private let screenStreamingService = ScreenStreamingService()
@@ -30,6 +32,7 @@ final class MacRemoteServer: ObservableObject {
         screenStreamingService.objectWillChange
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
+                self?.availableDisplayCount = self?.screenStreamingService.availableDisplayCount ?? 1
             }
             .store(in: &cancellables)
         #endif
@@ -89,6 +92,24 @@ final class MacRemoteServer: ObservableObject {
         #if os(macOS)
         remoteControlService.requestAccessibilityPermission()
         accessibilityStatusMessage = remoteControlService.accessibilityStatusMessage
+        #endif
+    }
+
+    func switchDisplay(to index: Int) {
+        currentDisplayIndex = index
+        #if os(macOS)
+        if isRunning, !connections.isEmpty {
+            Task { @MainActor in
+                let config = ScreenStreamingConfiguration(
+                    framesPerSecond: 15,
+                    maximumWidth: 1280,
+                    jpegQuality: 0.55,
+                    displayIndex: index
+                )
+                await screenStreamingService.start(configuration: config)
+                streamingStatusMessage = screenStreamingService.statusMessage
+            }
+        }
         #endif
     }
 
@@ -185,8 +206,10 @@ final class MacRemoteServer: ObservableObject {
     private func startScreenStreaming(for request: ScreenshotRequestPayload?) {
         #if os(macOS)
         Task { @MainActor in
-            await screenStreamingService.start(configuration: ScreenStreamingConfiguration(request: request))
+            let config = ScreenStreamingConfiguration(request: request)
+            await screenStreamingService.start(configuration: config)
             streamingStatusMessage = screenStreamingService.statusMessage
+            availableDisplayCount = screenStreamingService.availableDisplayCount
         }
         #endif
     }

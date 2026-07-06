@@ -12,6 +12,7 @@ import ScreenCaptureKit
 final class ScreenStreamingService: NSObject, ObservableObject {
     @Published private(set) var isStreaming = false
     @Published private(set) var statusMessage = "Screen stream stopped"
+    @Published private(set) var availableDisplayCount = 1
 
     var onFrame: ((RemoteMessage) -> Void)?
 
@@ -23,6 +24,7 @@ final class ScreenStreamingService: NSObject, ObservableObject {
     nonisolated(unsafe) private var lastFrameTime: CFTimeInterval = 0
     nonisolated(unsafe) private var isEncodingFrame = false
     nonisolated(unsafe) private var frameSequenceNumber = 0
+    nonisolated(unsafe) private var capturedDisplayCount = 1
 
     func start(configuration: ScreenStreamingConfiguration = ScreenStreamingConfiguration()) async {
         if isStreaming {
@@ -36,7 +38,12 @@ final class ScreenStreamingService: NSObject, ObservableObject {
 
         do {
             let shareableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-            guard let display = shareableContent.displays.first else {
+            let displays = shareableContent.displays
+            capturedDisplayCount = displays.count
+            availableDisplayCount = displays.count
+
+            let displayIndex = min(configuration.displayIndex, max(0, displays.count - 1))
+            guard let display = displays[safe: displayIndex] ?? displays.first else {
                 statusMessage = "No display available to capture"
                 return
             }
@@ -50,7 +57,8 @@ final class ScreenStreamingService: NSObject, ObservableObject {
 
             self.stream = stream
             isStreaming = true
-            statusMessage = "Streaming screen at \(configuration.framesPerSecond) FPS"
+            let displayLabel = displays.count > 1 ? " (Display \(displayIndex + 1)/\(displays.count))" : ""
+            statusMessage = "Streaming at \(configuration.framesPerSecond) FPS\(displayLabel)"
         } catch {
             isStreaming = false
             statusMessage = "Screen streaming failed: \(error.localizedDescription)"
@@ -126,7 +134,8 @@ final class ScreenStreamingService: NSObject, ObservableObject {
                 height: Int(extent.height),
                 jpegBase64: jpegData.base64EncodedString(),
                 encodedByteCount: jpegData.count,
-                sequenceNumber: frameSequenceNumber
+                sequenceNumber: frameSequenceNumber,
+                displayCount: capturedDisplayCount
             )
             return RemoteMessage(type: .screenshotResponse, screenshotResponse: payload)
         }
@@ -182,6 +191,12 @@ extension ScreenStreamingService: SCStreamOutput, SCStreamDelegate {
             self.stream = nil
             self.isEncodingFrame = false
         }
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
 #endif

@@ -8,6 +8,7 @@ struct TouchpadSurface: UIViewRepresentable {
     let onMove: (Double, Double) -> Void
     let onScroll: (Double, Double) -> Void
     let onClick: (Int) -> Void
+    let onRightClick: () -> Void
     let onDragStart: () -> Void
     let onDragEnd: () -> Void
 
@@ -25,6 +26,10 @@ struct TouchpadSurface: UIViewRepresentable {
         doubleTap.numberOfTouchesRequired = 1
         singleTap.require(toFail: doubleTap)
 
+        let longPress = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLongPress(_:)))
+        longPress.minimumPressDuration = 0.5
+        singleTap.require(toFail: longPress)
+
         let movePan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleMovePan(_:)))
         movePan.minimumNumberOfTouches = 1
         movePan.maximumNumberOfTouches = 1
@@ -37,6 +42,7 @@ struct TouchpadSurface: UIViewRepresentable {
 
         view.addGestureRecognizer(singleTap)
         view.addGestureRecognizer(doubleTap)
+        view.addGestureRecognizer(longPress)
         view.addGestureRecognizer(movePan)
         view.addGestureRecognizer(scrollPan)
         return view
@@ -59,6 +65,11 @@ struct TouchpadSurface: UIViewRepresentable {
         @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
             guard recognizer.state == .ended else { return }
             parent.onClick(recognizer.numberOfTapsRequired)
+        }
+
+        @objc func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+            guard recognizer.state == .began else { return }
+            parent.onRightClick()
         }
 
         @objc func handleMovePan(_ recognizer: UIPanGestureRecognizer) {

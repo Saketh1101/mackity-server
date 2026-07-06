@@ -96,6 +96,10 @@ final class KeyboardControlService: ObservableObject {
             return 36
         case .delete:
             return 51
+        case .tab:
+            return 48
+        case .escape:
+            return 53
         case .arrowLeft:
             return 123
         case .arrowRight:

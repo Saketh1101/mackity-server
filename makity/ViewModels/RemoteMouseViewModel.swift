@@ -31,6 +31,12 @@ final class RemoteMouseViewModel: ObservableObject {
         statusMessage = clickCount == 2 ? "Double click" : "Click"
     }
 
+    func rightClick() {
+        let payload = MouseClickPayload(button: .right, clickCount: 1, action: .click)
+        client.send(RemoteMessage(type: .mouseClick, mouseClick: payload))
+        statusMessage = "Right click"
+    }
+
     func beginDrag() {
         guard isDragModeEnabled else { return }
         let payload = MouseClickPayload(button: .left, clickCount: 1, action: .down)
